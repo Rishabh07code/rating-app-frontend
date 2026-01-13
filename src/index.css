@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+.bubble {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background-color: #4f46e5; /* indigo-600 */
+    animation: bubble-juggle 1.2s infinite ease-in-out;
+}
+
+.bubble-1 {
+    animation-delay: 0s;
+}
+.bubble-2 {
+    animation-delay: 0.15s;
+}
+.bubble-3 {
+    animation-delay: 0.3s;
+}
+
+@keyframes bubble-juggle {
+    0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.6;
+    }
+    40% {
+        transform: translateY(-12px);
+        opacity: 1;
+    }
+}
