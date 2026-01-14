@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAdmin } from "../context/AdminContext";
 
 function StoreModal({ isOpen, onClose }) {
-  const { addStore, users } = useAdmin();
+  const { addStore, availableOwners = [], fetchAvailableOwners } = useAdmin();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -11,6 +11,13 @@ function StoreModal({ isOpen, onClose }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Fetch available owners when modal opens
+  useEffect(() => {
+    if (isOpen && fetchAvailableOwners) {
+      fetchAvailableOwners();
+    }
+  }, [isOpen, fetchAvailableOwners]);
 
   if (!isOpen) return null;
 
@@ -72,8 +79,8 @@ function StoreModal({ isOpen, onClose }) {
     }
   };
 
-  // Filter only store owners who don't have a store yet
-  const availableOwners = users.filter(user => user.role === 'STORE_OWNER' && !user.Store);
+  // Use the availableOwners from context (no need to filter here)
+  const owners = availableOwners || [];
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -129,13 +136,13 @@ function StoreModal({ isOpen, onClose }) {
               className="w-full rounded-lg border-slate-200 text-sm focus:border-indigo-600 focus:ring-indigo-600/20"
             >
               <option value="">Select a store owner</option>
-              {availableOwners.map(owner => (
+              {owners.map(owner => (
                 <option key={owner.id} value={owner.id}>
                   {owner.name} ({owner.email})
                 </option>
               ))}
             </select>
-            {availableOwners.length === 0 && (
+            {owners.length === 0 && (
               <p className="text-xs text-amber-600">No available store owners. Please create a Store Owner user first.</p>
             )}
           </div>
@@ -145,7 +152,7 @@ function StoreModal({ isOpen, onClose }) {
           <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
           <button
             onClick={handleSubmit}
-            disabled={loading || availableOwners.length === 0}
+            disabled={loading || owners.length === 0}
             className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm disabled:opacity-70 flex items-center gap-2"
           >
             {loading && <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>}
