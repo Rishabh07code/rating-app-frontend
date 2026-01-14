@@ -5,13 +5,16 @@ import { useAuth } from './AuthContext';
 const AdminContext = createContext();
 
 export const AdminProvider = ({ children }) => {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const isAdmin = user?.role === 'ADMIN';
 
     // State
     const [stats, setStats] = useState({ totalUsers: 0, totalStores: 0, totalRatings: 0 });
     const [users, setUsers] = useState([]);
+    const [storeOwners, setStoreOwners] = useState([]);
+    const [admins, setAdmins] = useState([]);
     const [stores, setStores] = useState([]);
+    const [availableOwners, setAvailableOwners] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -26,7 +29,7 @@ export const AdminProvider = ({ children }) => {
         }
     }, [isAdmin]);
 
-    // Fetch Users
+    // Fetch Users (Normal Users Only)
     const fetchUsers = useCallback(async (filters = {}) => {
         if (!isAdmin) return;
         setLoading(true);
@@ -42,6 +45,32 @@ export const AdminProvider = ({ children }) => {
         }
     }, [isAdmin]);
 
+    // Fetch Store Owners
+    const fetchStoreOwners = useCallback(async () => {
+        if (!isAdmin) return;
+        try {
+            const { data } = await api.get('/admin/store-owners');
+            setStoreOwners(data);
+            setError(null);
+        } catch (err) {
+            console.error("Fetch store owners error:", err);
+            setError(err.response?.data?.message || 'Failed to fetch store owners');
+        }
+    }, [isAdmin]);
+
+    // Fetch Admins
+    const fetchAdmins = useCallback(async () => {
+        if (!isAdmin) return;
+        try {
+            const { data } = await api.get('/admin/admins');
+            setAdmins(data);
+            setError(null);
+        } catch (err) {
+            console.error("Fetch admins error:", err);
+            setError(err.response?.data?.message || 'Failed to fetch admins');
+        }
+    }, [isAdmin]);
+
     // Fetch Stores
     const fetchStores = useCallback(async () => {
         if (!isAdmin) return;
@@ -54,24 +83,45 @@ export const AdminProvider = ({ children }) => {
         }
     }, [isAdmin]);
 
+    // Fetch Available Owners (store owners without stores)
+    const fetchAvailableOwners = useCallback(async () => {
+        if (!isAdmin) return;
+        try {
+            const { data } = await api.get('/admin/available-owners');
+            setAvailableOwners(data);
+            setError(null);
+        } catch (err) {
+            console.error("Fetch available owners error:", err);
+            setError(err.response?.data?.message || 'Failed to fetch available owners');
+        }
+    }, [isAdmin]);
+
     // Add User
     const addUser = async (userData) => {
         try {
             const { data } = await api.post('/admin/users', userData);
-            setUsers(prev => [...prev, data]);
+            // Refresh appropriate list based on role
+            if (userData.role === 'USER') {
+                setUsers(prev => [...prev, data]);
+            } else if (userData.role === 'STORE_OWNER') {
+                fetchStoreOwners(); // Refresh store owners with new store info
+            } else if (userData.role === 'ADMIN') {
+                setAdmins(prev => [...prev, data]);
+            }
             fetchStats(); // Update stats
-            if (userData.role === 'STORE_OWNER') fetchStores(); // Update stores list if new store created
             return { success: true };
         } catch (err) {
             return { success: false, message: err.response?.data?.message || 'Failed to create user' };
         }
     };
 
-    // Add Store
+    // Add Store (for existing store owner)
     const addStore = async (storeData) => {
         try {
             const { data } = await api.post('/admin/stores', storeData);
             setStores(prev => [...prev, data]);
+            fetchStoreOwners(); // Refresh store owners to update their store info
+            fetchAvailableOwners(); // Refresh available owners list
             fetchStats(); // Update stats
             return { success: true };
         } catch (err) {
@@ -81,23 +131,32 @@ export const AdminProvider = ({ children }) => {
 
     // Initial Load
     useEffect(() => {
-        if (isAdmin) {
+        // Only fetch if user is authenticated, is admin, and auth is not loading
+        if (isAdmin && !authLoading && user?.token) {
             fetchStats();
             fetchUsers();
+            fetchStoreOwners();
+            fetchAdmins();
             fetchStores();
         }
-    }, [isAdmin, fetchStats, fetchUsers, fetchStores]);
+    }, [isAdmin, authLoading, user?.token, fetchStats, fetchUsers, fetchStoreOwners, fetchAdmins, fetchStores]);
 
     return (
         <AdminContext.Provider
             value={{
                 stats,
                 users,
+                storeOwners,
+                admins,
                 stores,
+                availableOwners,
                 loading,
                 error,
                 fetchUsers,
+                fetchStoreOwners,
+                fetchAdmins,
                 fetchStores,
+                fetchAvailableOwners,
                 addUser,
                 addStore
             }}
