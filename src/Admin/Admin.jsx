@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { useAdmin } from '../context/AdminContext';
 import Navbar from '../components/Navbar';
 import UserTable from './UserTable';
+import StoreOwnerTable from './StoreOwnerTable';
+import AdminsTable from './AdminsTable';
 import StoreTableForAdmin from './StoreTableForAdmin';
 import Welcome from './Welcome';
 import Toggle from './Toggle';
@@ -25,7 +27,10 @@ const AdminDashboard = () => {
                 <Welcome user={user} />
                 <Stats stats={stats} />
                 <Toggle activeView={activeView} setActiveView={setActiveView} />
-                {activeView === 'users' ? (<UserTable isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} />) : (<StoreTableForAdmin />)}
+                {activeView === 'users' && <UserTable isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} />}
+                {activeView === 'store-owners' && <StoreOwnerTable />}
+                {activeView === 'admins' && <AdminsTable />}
+                {activeView === 'stores' && <StoreTableForAdmin />}
             </div>
             <UserModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         </div>
